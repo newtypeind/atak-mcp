@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2026 Newtype Industries
 """MCP stdio server exposing the ATAK bridge to AI agents.
 

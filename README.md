@@ -163,4 +163,4 @@ description, and `tap` prefers a clickable match over a same-text label.
 
 ## License
 
-GPL-3.0-only. See [LICENSE](LICENSE).
+Apache-2.0. See [LICENSE](LICENSE).

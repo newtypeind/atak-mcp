@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2026 Newtype Industries
 """atak-mcp: drive ATAK plugins over adb without blind taps.
 
