@@ -1,6 +1,6 @@
 [project]
 name = "atak-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Drive ATAK (Android Team Awareness Kit) and its plugins over adb without blind taps: CLI + MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
