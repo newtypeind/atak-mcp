@@ -7,4 +7,4 @@ adb and uiautomator, a command-line front end (``cli.py``), and an MCP stdio
 server (``server.py``).
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

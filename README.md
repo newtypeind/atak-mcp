@@ -43,7 +43,7 @@ a throwaway environment:
 
 ```bash
 # Pinned to a release (recommended for reproducibility)
-uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp devices
+uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.1 atak-mcp devices
 
 # Or always track the latest main
 uvx --from git+https://github.com/newtypeind/atak-mcp atak-mcp devices
@@ -61,7 +61,7 @@ Two console commands are provided:
 Add it to a project with the CLI:
 
 ```bash
-claude mcp add atak -- uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp-server
+claude mcp add atak -- uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.1 atak-mcp-server
 ```
 
 or commit a project-scoped `.mcp.json` so your whole team (and any agent) gets it:
@@ -73,7 +73,7 @@ or commit a project-scoped `.mcp.json` so your whole team (and any agent) gets i
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/newtypeind/atak-mcp@v0.1.0",
+        "git+https://github.com/newtypeind/atak-mcp@v0.1.1",
         "atak-mcp-server"
       ]
     }
@@ -91,7 +91,7 @@ Add the same block to the client's MCP config (for Claude Desktop that is
   "mcpServers": {
     "atak": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/newtypeind/atak-mcp@v0.1.0", "atak-mcp-server"]
+      "args": ["--from", "git+https://github.com/newtypeind/atak-mcp@v0.1.1", "atak-mcp-server"]
     }
   }
 }
@@ -155,7 +155,7 @@ hangs.
 ## Use as a CLI
 
 ```bash
-A="uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp"
+A="uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.1 atak-mcp"
 
 $A devices                       # list attached devices
 $A screenshot -o /tmp/atak.png   # capture screen; geometry printed to stderr
