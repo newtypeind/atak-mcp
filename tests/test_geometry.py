@@ -10,7 +10,8 @@ geometry resolver must prefer ``dumpsys display`` so it does not transpose.
 
 import struct
 
-import atak_mcp.bridge as bridge
+from atak_mcp.bridge import input as binput
+from atak_mcp.bridge import ui
 
 # Trimmed but faithful `dumpsys display` for the Z Flip3 in app-forced landscape.
 DUMPSYS_LANDSCAPE = """
@@ -35,42 +36,42 @@ def _png_header(w, h):
 
 
 # --------------------------------------------------------------------------- #
-# parsers
+# parsers (live in bridge.ui)
 # --------------------------------------------------------------------------- #
 def test_parse_display_size_prefers_viewport():
-    assert bridge._parse_display_size(DUMPSYS_LANDSCAPE) == (2640, 1080, "viewport")
-    assert bridge._parse_display_size(DUMPSYS_PORTRAIT) == (1080, 2340, "viewport")
+    assert ui._parse_display_size(DUMPSYS_LANDSCAPE) == (2640, 1080, "viewport")
+    assert ui._parse_display_size(DUMPSYS_PORTRAIT) == (1080, 2340, "viewport")
 
 
 def test_parse_display_size_override_fallback():
-    assert bridge._parse_display_size(DUMPSYS_OVERRIDE_ONLY) == (2640, 1080, "override")
+    assert ui._parse_display_size(DUMPSYS_OVERRIDE_ONLY) == (2640, 1080, "override")
 
 
 def test_parse_display_size_unparseable():
-    assert bridge._parse_display_size("no geometry here") == (0, 0, "")
+    assert ui._parse_display_size("no geometry here") == (0, 0, "")
 
 
 def test_parse_rotation():
-    assert bridge._parse_rotation(DUMPSYS_LANDSCAPE) == 1
-    assert bridge._parse_rotation(DUMPSYS_PORTRAIT) == 0
-    assert bridge._parse_rotation("nothing") is None
+    assert ui._parse_rotation(DUMPSYS_LANDSCAPE) == 1
+    assert ui._parse_rotation(DUMPSYS_PORTRAIT) == 0
+    assert ui._parse_rotation("nothing") is None
 
 
 def test_parse_wm_size():
-    assert bridge._parse_wm_size("Physical size: 1080x2640") == (1080, 2640)
+    assert ui._parse_wm_size("Physical size: 1080x2640") == (1080, 2640)
     # Override beats Physical.
-    assert bridge._parse_wm_size(
+    assert ui._parse_wm_size(
         "Physical size: 1080x2640\nOverride size: 1440x3200"
     ) == (1440, 3200)
 
 
 def test_png_size():
-    assert bridge._png_size(_png_header(2640, 1080)) == (2640, 1080)
-    assert bridge._png_size(b"not a png at all") == (0, 0)
+    assert ui._png_size(_png_header(2640, 1080)) == (2640, 1080)
+    assert ui._png_size(b"not a png at all") == (0, 0)
 
 
 # --------------------------------------------------------------------------- #
-# display_geometry (adb stubbed)
+# display_geometry (ui.adb stubbed)
 # --------------------------------------------------------------------------- #
 def _stub_adb(display="", wm="", window="", user_rotation=""):
     def fake(args, *a, **k):
@@ -89,10 +90,10 @@ def _stub_adb(display="", wm="", window="", user_rotation=""):
 
 def test_display_geometry_app_forced_landscape(monkeypatch):
     monkeypatch.setattr(
-        bridge, "adb",
+        ui, "adb",
         _stub_adb(display=DUMPSYS_LANDSCAPE, wm="Physical size: 1080x2640"),
     )
-    g = bridge.display_geometry()
+    g = ui.display_geometry()
     # Current-rotation pixel space matches screencap/tap, NOT the transposed wm size.
     assert (g["width"], g["height"]) == (2640, 1080)
     assert g["rotation"] == 1
@@ -102,50 +103,50 @@ def test_display_geometry_app_forced_landscape(monkeypatch):
 
 def test_display_geometry_falls_back_to_wm_size(monkeypatch):
     monkeypatch.setattr(
-        bridge, "adb",
+        ui, "adb",
         _stub_adb(display="garbage", wm="Physical size: 1080x2340", window="mRotation=0"),
     )
-    g = bridge.display_geometry()
+    g = ui.display_geometry()
     assert (g["width"], g["height"]) == (1080, 2340)  # portrait, rotation 0
     assert g["source"] == "wm_size"
 
 
 def test_display_geometry_wm_fallback_landscape(monkeypatch):
     monkeypatch.setattr(
-        bridge, "adb",
+        ui, "adb",
         _stub_adb(display="garbage", wm="Physical size: 1080x2340", window="mRotation=1"),
     )
-    g = bridge.display_geometry()
+    g = ui.display_geometry()
     assert (g["width"], g["height"]) == (2340, 1080)  # rotation 1 -> landscape
 
 
 # --------------------------------------------------------------------------- #
-# normalized -> pixel conversion
+# normalized -> pixel conversion (lives in bridge.input)
 # --------------------------------------------------------------------------- #
 def test_to_px_passthrough():
-    assert bridge._to_px(100, 200, norm=False) == (100, 200)
+    assert binput._to_px(100, 200, norm=False) == (100, 200)
 
 
 def test_to_px_normalized(monkeypatch):
-    monkeypatch.setattr(bridge, "device_size", lambda serial=None: (2640, 1080))
-    assert bridge._to_px(0.5, 0.5, norm=True) == (1320, 540)
-    assert bridge._to_px(0.0, 0.0, norm=True) == (0, 0)
+    monkeypatch.setattr(binput, "device_size", lambda serial=None: (2640, 1080))
+    assert binput._to_px(0.5, 0.5, norm=True) == (1320, 540)
+    assert binput._to_px(0.0, 0.0, norm=True) == (0, 0)
     # 1.0 clamps to the last addressable pixel.
-    assert bridge._to_px(1.0, 1.0, norm=True) == (2639, 1079)
+    assert binput._to_px(1.0, 1.0, norm=True) == (2639, 1079)
 
 
 def test_tap_xy_normalized(monkeypatch):
-    monkeypatch.setattr(bridge, "device_size", lambda serial=None: (2640, 1080))
+    monkeypatch.setattr(binput, "device_size", lambda serial=None: (2640, 1080))
     calls = []
-    monkeypatch.setattr(bridge, "adb", lambda args, *a, **k: calls.append(list(args)))
-    assert bridge.tap_xy(0.5, 0.5, norm=True) == (1320, 540)
+    monkeypatch.setattr(binput, "adb", lambda args, *a, **k: calls.append(list(args)))
+    assert binput.tap_xy(0.5, 0.5, norm=True) == (1320, 540)
     assert calls[0] == ["shell", "input", "tap", "1320", "540"]
 
 
 def test_swipe_normalized(monkeypatch):
-    monkeypatch.setattr(bridge, "device_size", lambda serial=None: (2640, 1080))
+    monkeypatch.setattr(binput, "device_size", lambda serial=None: (2640, 1080))
     calls = []
-    monkeypatch.setattr(bridge, "adb", lambda args, *a, **k: calls.append(list(args)))
-    p1, p2 = bridge.swipe(0.1, 0.2, 0.8, 0.9, 300, norm=True)
+    monkeypatch.setattr(binput, "adb", lambda args, *a, **k: calls.append(list(args)))
+    p1, p2 = binput.swipe(0.1, 0.2, 0.8, 0.9, 300, norm=True)
     assert p1 == (264, 216) and p2 == (2112, 972)
     assert calls[0] == ["shell", "input", "swipe", "264", "216", "2112", "972", "300"]

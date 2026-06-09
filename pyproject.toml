@@ -1,6 +1,6 @@
 [project]
 name = "atak-mcp"
-version = "0.1.1"
+version = "0.2.0"
 description = "Drive ATAK (Android Team Awareness Kit) and its plugins over adb without blind taps: CLI + MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,9 @@ classifiers = [
 # The MCP server needs `mcp`. The bridge and CLI themselves use only the standard
 # library, so a single `uvx atak-mcp ...` call works out of the box too.
 dependencies = ["mcp>=1.2.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.23", "pytest-cov>=5"]
 
 [project.scripts]
 atak-mcp = "atak_mcp.cli:main"
@@ -42,3 +45,19 @@ packages = ["src/atak_mcp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+# Device/integration tests are opt-in; they need a connected device/emulator.
+# Run them with:  pytest -m device
+markers = ["device: integration test that needs a connected adb device"]
+addopts = "-m 'not device'"
+
+[tool.coverage.run]
+source = ["atak_mcp"]
+relative_files = true   # package-relative paths so diff-cover maps them via src-roots
+omit = ["*/server.py"]  # thin FastMCP passthroughs; covered via call_tool smoke
+
+[tool.coverage.report]
+# Device-timing orchestration (navigation cascades, polling loops, doctor) is
+# covered by the opt-in `device` tests, not the unit suite, so we don't gate the
+# whole tree. The CI gate is on patch coverage (changed lines) instead.
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
