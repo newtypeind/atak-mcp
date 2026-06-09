@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  push:
-    branches: [main, "release/**"]
   pull_request:
+    branches: [main]
 
 jobs:
   test:
@@ -30,7 +29,6 @@ jobs:
   patch-coverage:
     name: patch coverage (changed lines)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
