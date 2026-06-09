@@ -279,10 +279,17 @@ bump `ATAK_TESTED_VERSION`.
 ```bash
 git clone https://github.com/newtypeind/atak-mcp
 cd atak-mcp
-uv run atak-mcp devices          # run the CLI from source
-uv run atak-mcp-server           # run the MCP server from source
-uv build                         # build wheel + sdist into dist/
+uv run atak-mcp devices             # run the CLI from source
+uv run atak-mcp-server              # run the MCP server from source
+uv build                            # build wheel + sdist into dist/
+uv run --extra test pytest          # device-free unit suite
+uv run --extra test pytest -m device  # opt-in: needs a connected device
 ```
+
+Tests live in `tests/` and run without a device: the suite mocks the single
+`adb` boundary (see `tests/conftest.py`). CI runs them on every push/PR and
+gates PRs on patch coverage of changed lines. New bridge functions, MCP tools,
+or CLI commands should ship with a test — see [CLAUDE.md](CLAUDE.md).
 
 ## How it works
 

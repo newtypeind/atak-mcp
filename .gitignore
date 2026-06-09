@@ -16,6 +16,11 @@ uv.lock
 .ruff_cache/
 .pytest_cache/
 
+# coverage
+.coverage
+coverage.xml
+htmlcov/
+
 # OS / editor
 .DS_Store
 .idea/
