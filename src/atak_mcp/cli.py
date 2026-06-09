@@ -19,7 +19,7 @@ import argparse
 import json
 import sys
 
-from . import bridge
+from . import __version__, bridge, update
 from .bridge import AdbError
 
 
@@ -41,9 +41,11 @@ def _print_nodes(nodes, as_json: bool):
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="atak-mcp", description="Drive ATAK over adb.")
     p.add_argument("--serial", help="adb device serial (default: $ANDROID_SERIAL)")
+    p.add_argument("--version", action="version", version=f"atak-mcp {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("devices", help="list attached devices")
+    sub.add_parser("update-check", help="check GitHub for a newer atak-mcp release")
 
     sp = sub.add_parser("screenshot", help="capture a PNG screenshot")
     sp.add_argument("-o", "--out", default="/tmp/atak_mcp_screen.png")
@@ -249,6 +251,8 @@ def main(argv=None) -> int:
     try:
         if args.cmd == "devices":
             print(json.dumps(bridge.devices(), indent=2))
+        elif args.cmd == "update-check":
+            print(json.dumps(update.check_update(), indent=2, ensure_ascii=False))
         elif args.cmd == "screenshot":
             print(bridge.screenshot(args.out, s))
         elif args.cmd == "dump":

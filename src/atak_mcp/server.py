@@ -32,7 +32,7 @@ except ImportError as exc:  # pragma: no cover
         f"(import error: {exc})"
     )
 
-from . import bridge
+from . import __version__, bridge, update
 
 mcp = FastMCP("atak")
 
@@ -393,6 +393,23 @@ def edit_server(name: str, new_name: str = "", new_host: str = "",
 def set_server_enabled(name: str, enabled: bool) -> str:
     """Enable or disable a server connection (toggles its checkbox)."""
     return bridge.set_server_enabled(name, enabled)
+
+
+@mcp.tool()
+def mcp_version() -> str:
+    """The installed atak-mcp version."""
+    return __version__
+
+
+@mcp.tool()
+def check_update() -> str:
+    """Check GitHub for a newer atak-mcp release.
+
+    Returns JSON {current, latest, update_available, hint}. Use it to tell the
+    user when to refresh; applying the update is a uvx concern (re-pin the tag,
+    or `uvx --refresh` if tracking main).
+    """
+    return json.dumps(update.check_update(), indent=2, ensure_ascii=False)
 
 
 def main() -> None:

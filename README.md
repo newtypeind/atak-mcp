@@ -43,7 +43,7 @@ a throwaway environment:
 
 ```bash
 # Pinned to a release (recommended for reproducibility)
-uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp devices
+uvx --from git+https://github.com/newtypeind/atak-mcp@v0.2.0 atak-mcp devices
 
 # Or always track the latest main
 uvx --from git+https://github.com/newtypeind/atak-mcp atak-mcp devices
@@ -61,7 +61,7 @@ Two console commands are provided:
 Add it to a project with the CLI:
 
 ```bash
-claude mcp add atak -- uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp-server
+claude mcp add atak -- uvx --from git+https://github.com/newtypeind/atak-mcp@v0.2.0 atak-mcp-server
 ```
 
 or commit a project-scoped `.mcp.json` so your whole team (and any agent) gets it:
@@ -73,7 +73,7 @@ or commit a project-scoped `.mcp.json` so your whole team (and any agent) gets i
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/newtypeind/atak-mcp@v0.1.0",
+        "git+https://github.com/newtypeind/atak-mcp@v0.2.0",
         "atak-mcp-server"
       ]
     }
@@ -91,7 +91,7 @@ Add the same block to the client's MCP config (for Claude Desktop that is
   "mcpServers": {
     "atak": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/newtypeind/atak-mcp@v0.1.0", "atak-mcp-server"]
+      "args": ["--from", "git+https://github.com/newtypeind/atak-mcp@v0.2.0", "atak-mcp-server"]
     }
   }
 }
@@ -99,6 +99,34 @@ Add the same block to the client's MCP config (for Claude Desktop that is
 
 Select a device with the `ANDROID_SERIAL` environment variable when more than one
 is attached (add an `"env": { "ANDROID_SERIAL": "..." }` key to the server entry).
+
+### Updating atak-mcp
+
+Your MCP client launches the server fresh each session with `uvx`, so "updating"
+is really about which version `uvx` resolves. Pick one of:
+
+1. **Pin a release tag (recommended).** Keep `@v0.2.0` in the config. `uvx`
+   caches and reuses it, so the version is reproducible. To update, bump the tag
+   (e.g. `@v0.3.0`) and restart the client — you decide when.
+
+2. **Track `main`, auto-refresh.** Drop the tag and add `--refresh`, so every
+   launch re-resolves the branch and rebuilds if it moved:
+
+   ```json
+   "args": ["--refresh", "--from", "git+https://github.com/newtypeind/atak-mcp", "atak-mcp-server"]
+   ```
+
+   Always latest, at the cost of a few seconds' startup and no reproducibility.
+
+3. **One-off refresh.** Force a re-pull without editing the config:
+   `uvx --refresh --from git+https://github.com/newtypeind/atak-mcp@main atak-mcp-server`,
+   or clear the cache with `uv cache clean`.
+
+To know *when* an update is worth pulling, ask the server: the `check_update`
+tool (or `atak-mcp update-check`) compares the running version to the latest
+GitHub release tag and reports `update_available` plus a one-line hint;
+`mcp_version` / `atak-mcp --version` print the installed version. An agent can
+call `check_update` at the start of a session and tell you if you're behind.
 
 ### Tools exposed
 
@@ -122,13 +150,15 @@ limits that make them necessary.
 Server connections: `list_servers` (name, host, port, protocol, enabled,
 status), `add_server`, `edit_server`, `remove_server`, `set_server_enabled`.
 
-Version / health: `atak_version`, `doctor` (probe the device for version drift
-and capabilities).
+Version / health: `atak_version` (the installed ATAK version), `doctor` (probe
+the device for version drift and capabilities), `mcp_version` (this tool's own
+version), `check_update` (is a newer atak-mcp release out — see *Updating
+atak-mcp*).
 
 ## Use as a CLI
 
 ```bash
-A="uvx --from git+https://github.com/newtypeind/atak-mcp@v0.1.0 atak-mcp"
+A="uvx --from git+https://github.com/newtypeind/atak-mcp@v0.2.0 atak-mcp"
 
 $A devices                       # list attached devices
 $A screenshot -o /tmp/atak.png   # capture screen (handles the foldable warning)
