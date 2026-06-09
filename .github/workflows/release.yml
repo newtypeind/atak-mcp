@@ -1,0 +1,35 @@
+name: Release
+
+# Turns a pushed version tag into a GitHub Release (a tag alone is just a git
+# ref; the Release object -- notes, assets, the "Latest" badge -- is separate).
+# Tag a release the usual way and this publishes it:
+#   git tag -a v0.3.0 -m "..."  &&  git push origin v0.3.0
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write   # required for `gh release create`
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv build          # wheel + sdist into dist/
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # --generate-notes auto-builds the notes from merged PRs/commits since the
+        # last release (zero maintenance). Swap for `--notes-from-tag` to use the
+        # annotated tag message instead, or `--notes-file CHANGELOG.md` for hand-
+        # written notes.
+        run: >
+          gh release create "${{ github.ref_name }}"
+          dist/*
+          --title "${{ github.ref_name }}"
+          --generate-notes
+          --verify-tag
