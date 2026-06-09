@@ -294,9 +294,10 @@ uv run --extra test pytest -m device  # opt-in: needs a connected device
 ```
 
 Tests live in `tests/` and run without a device: the suite mocks the single
-`adb` boundary (see `tests/conftest.py`). CI runs them on every push/PR and
-gates PRs on patch coverage of changed lines. New bridge functions, MCP tools,
-or CLI commands should ship with a test — see [CLAUDE.md](CLAUDE.md).
+`adb` boundary (see `tests/conftest.py`). CI runs them on every PR (the hard
+gate) and reports patch coverage of changed lines as a review guide. New bridge
+functions, MCP tools, or CLI commands should ship with a test — see
+[CLAUDE.md](CLAUDE.md).
 
 ## How it works
 

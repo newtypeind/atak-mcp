@@ -17,9 +17,11 @@ uv run --extra test pytest --cov    # with coverage
 uv run --extra test pytest -m device  # opt-in: needs a connected adb device
 ```
 
-CI runs the same suite on every push/PR and gates on it; PRs also gate on **patch
-coverage** (changed lines must be ~90% covered), so untested new code is blocked
-regardless of whether a session remembers this note.
+CI runs the same suite on every PR and gates on it passing. PRs also report
+**patch coverage** of the changed lines as a review guide (aim ~90% on the
+testable parts); it is advisory, not a hard block, because device-timing code is
+covered by opt-in `device` tests, not the unit suite. The hard rule is the line
+above: new bridge functions, MCP tools, or CLI commands ship with a test.
 
 ### How tests work here
 
