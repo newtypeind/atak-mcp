@@ -258,22 +258,33 @@ uv build                         # build wheel + sdist into dist/
 
 ```
 src/atak_mcp/
-  bridge.py   # adb + uiautomator core (standard library only)
-  cli.py      # argparse front end
-  server.py   # FastMCP stdio server
+  bridge/        # the core, split by concern (standard library only)
+    _adb.py      #   low-level adb runner, devices, constants, AdbError
+    ui.py        #   screenshot + uiautomator tree (Node, dump, find, wait_for)
+    input.py     #   taps, gestures, text entry
+    device.py    #   power/lifecycle, packages, permissions, files, logs, diag
+    intents.py   #   broadcasts and tak: deep links (enroll, import_url, ...)
+    plugins.py   #   install/reload lifecycle and dev-loop composites
+    health.py    #   version detection and the doctor check
+    servers.py   #   TAK server connection CRUD
+  cli.py         # argparse front end
+  server.py      # FastMCP stdio server
 ```
 
-`bridge.py` shells out to `adb`. Screenshots are captured with
+`bridge` shells out to `adb`. Screenshots are captured with
 `adb exec-out screencap -p`; on foldables/multi-display devices that command
 prepends a warning banner before the PNG bytes, which the bridge strips. The UI
 tree comes from `uiautomator dump` (retried, since it refuses to dump mid-
 animation). `find`/`tap` match against each node's text, resource id, and content
 description, and `tap` prefers a clickable match over a same-text label.
 
+`bridge/__init__.py` re-exports every submodule's public API, so callers use a
+flat `bridge.<name>` and don't need to know which file a function lives in.
+
 For configuration that the UI cannot reach, `push` wraps `adb push` (to stage a
-certificate or data package on the device) and `broadcast` wraps
-`adb shell am broadcast` (to drive ATAK's Intent-based config, e.g. importing a
-staged data package), so an agent is not limited to what is tappable on screen.
+certificate or data package on the device) and the `tak:` deep links
+(`enroll`/`import_url`/`deep_link`) drive ATAK's supported external entry point,
+so an agent is not limited to what is tappable on screen.
 
 ## License
 
