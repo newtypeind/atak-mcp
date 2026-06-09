@@ -22,6 +22,7 @@ __all__ = [
     "push", "pull", "wake_unlock", "stay_awake", "is_running", "force_stop",
     "clear_app_data", "launch_atak", "restart_atak", "grant_permission",
     "revoke_permission", "crashes", "record_start", "record_stop",
+    "is_emulator", "reverse", "reverse_list", "reverse_remove", "host_address",
 ]
 
 
@@ -121,6 +122,57 @@ def pull(remote: str, local: str, serial: Optional[str] = None) -> str:
     exported, e.g. for CI artifacts.
     """
     return adb(["pull", remote, local], serial, timeout=300)
+
+
+# --------------------------------------------------------------------------- #
+# network: reaching a host-local server from the device
+# --------------------------------------------------------------------------- #
+def is_emulator(serial: Optional[str] = None) -> bool:
+    """True if the target is an Android emulator (rather than a USB device).
+
+    This decides how the device reaches a server on the host's loopback: an
+    emulator uses the ``10.0.2.2`` host alias directly, while a USB device needs
+    an ``adb reverse`` tunnel and then talks to its own ``127.0.0.1``.
+    """
+    s = serial or os.environ.get("ANDROID_SERIAL", "") or ""
+    if s.startswith("emulator-"):
+        return True
+    for prop in ("ro.kernel.qemu", "ro.boot.qemu"):
+        if adb(["shell", "getprop", prop], serial, check=False).strip() == "1":
+            return True
+    chars = adb(["shell", "getprop", "ro.build.characteristics"], serial, check=False)
+    return "emulator" in chars
+
+
+def reverse(remote_port: int, local_port: Optional[int] = None,
+            serial: Optional[str] = None) -> str:
+    """Set up ``adb reverse tcp:<remote> tcp:<local>``.
+
+    The device's ``localhost:<remote_port>`` is then tunnelled to the host's
+    ``localhost:<local_port>`` (defaults to the same port), so an app on a USB
+    device can reach a server running on the host machine.
+    """
+    local_port = remote_port if local_port is None else local_port
+    return adb(["reverse", f"tcp:{remote_port}", f"tcp:{local_port}"], serial)
+
+
+def reverse_list(serial: Optional[str] = None) -> str:
+    """List active ``adb reverse`` tunnels."""
+    return adb(["reverse", "--list"], serial, check=False)
+
+
+def reverse_remove(remote_port: int, serial: Optional[str] = None) -> str:
+    """Remove the ``adb reverse`` tunnel for ``tcp:<remote_port>``."""
+    return adb(["reverse", "--remove", f"tcp:{remote_port}"], serial, check=False)
+
+
+def host_address(serial: Optional[str] = None) -> str:
+    """The device-side address that reaches the host's loopback.
+
+    ``10.0.2.2`` on an emulator (the standard host alias), ``127.0.0.1`` on a
+    USB device (valid only once an ``adb reverse`` tunnel for the port exists).
+    """
+    return "10.0.2.2" if is_emulator(serial) else "127.0.0.1"
 
 
 # --------------------------------------------------------------------------- #

@@ -477,6 +477,60 @@ def check_update() -> str:
     return json.dumps(update.check_update(), indent=2, ensure_ascii=False)
 
 
+@mcp.tool()
+def is_emulator() -> bool:
+    """Return whether the target is an Android emulator (vs a USB device)."""
+    return bridge.is_emulator()
+
+
+@mcp.tool()
+def reverse(remote_port: int, local_port: int = 0) -> str:
+    """Set up `adb reverse tcp:<remote> tcp:<local>` (local defaults to remote).
+
+    The device's localhost:<remote_port> then tunnels to the host's
+    localhost:<local_port>, so an app on a USB device can reach a host server.
+    """
+    return bridge.reverse(remote_port, local_port or None)
+
+
+@mcp.tool()
+def connect_local_server(port: int, name: str = "local", protocol: str = "tcp") -> str:
+    """Connect ATAK to a TAK server running on the host machine.
+
+    USB device: sets up an adb reverse tunnel and connects to 127.0.0.1:<port>.
+    Emulator: connects to 10.0.2.2:<port> (the host alias). protocol = tcp|ssl|quic.
+    """
+    return bridge.connect_local_server(port, name, protocol)
+
+
+@mcp.tool()
+def fix_opengl() -> str:
+    """Disable ATAK's OpenGL map rendering (emulator render-crash fix). Restart ATAK to apply."""
+    return bridge.fix_opengl()
+
+
+@mcp.tool()
+def fix_audio_input(avd: str = "") -> str:
+    """Enable host-mic passthrough in an emulator AVD (hw.audioInput=yes). Restart the emulator."""
+    return bridge.fix_audio_input(avd or None)
+
+
+@mcp.tool()
+def init_maps(tag: str = "v1.5.0") -> str:
+    """Install ATAK-Maps custom map sources so a blank-map ATAK has a basemap.
+
+    Downloads the ATAK-Maps release and pushes its map-source XMLs into ATAK.
+    Reopen the map-source picker (or restart ATAK) and choose one, e.g. Bing_Satellite.
+    """
+    return json.dumps(bridge.init_maps(tag=tag), indent=2, ensure_ascii=False)
+
+
+@mcp.tool()
+def list_map_sources() -> str:
+    """List the map-source XMLs installed in ATAK's mobile map-sources dir."""
+    return "\n".join(bridge.list_map_sources()) or "(none)"
+
+
 def main() -> None:
     mcp.run()
 

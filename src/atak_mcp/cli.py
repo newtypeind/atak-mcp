@@ -271,6 +271,29 @@ def main(argv=None) -> int:
     g.add_argument("--on", action="store_true")
     g.add_argument("--off", action="store_true")
 
+    sub.add_parser("is-emulator", help="exit 0 if the target is an emulator")
+
+    sp = sub.add_parser("reverse", help="set up an adb reverse tunnel (tcp)")
+    sp.add_argument("port", type=int)
+    sp.add_argument("--local", type=int, help="host port (default: same as port)")
+
+    sp = sub.add_parser("connect-local",
+                        help="connect ATAK to a TAK server on the host (USB: adb reverse; emulator: 10.0.2.2)")
+    sp.add_argument("port", type=int)
+    sp.add_argument("--name", default="local")
+    sp.add_argument("--proto", choices=["tcp", "ssl", "quic"], default="tcp")
+
+    sub.add_parser("fix-opengl", help="disable ATAK OpenGL (emulator render-crash fix)")
+    sub.add_parser("clear-opengl", help="re-enable ATAK OpenGL rendering")
+
+    sp = sub.add_parser("fix-audio", help="enable mic passthrough in an emulator AVD")
+    sp.add_argument("--avd", help="AVD name (default: the only AVD, if one)")
+
+    sp = sub.add_parser("init-maps", help="install ATAK-Maps custom map sources")
+    sp.add_argument("--tag", default="v1.5.0", help="ATAK-Maps release tag")
+
+    sub.add_parser("map-sources", help="list installed ATAK map sources")
+
     args = p.parse_args(argv)
     s = args.serial
 
@@ -464,6 +487,25 @@ def main(argv=None) -> int:
                                      args.new_port, args.new_proto, s))
         elif args.cmd == "set-server":
             print(bridge.set_server_enabled(args.name, args.on, s))
+        elif args.cmd == "is-emulator":
+            emu = bridge.is_emulator(s)
+            print("emulator" if emu else "device")
+            return 0 if emu else 1
+        elif args.cmd == "reverse":
+            print(bridge.reverse(args.port, args.local, s) or
+                  f"reverse tcp:{args.port} -> tcp:{args.local or args.port}")
+        elif args.cmd == "connect-local":
+            print(bridge.connect_local_server(args.port, args.name, args.proto, s))
+        elif args.cmd == "fix-opengl":
+            print(bridge.fix_opengl(s))
+        elif args.cmd == "clear-opengl":
+            print(bridge.clear_opengl_fix(s))
+        elif args.cmd == "fix-audio":
+            print(bridge.fix_audio_input(args.avd))
+        elif args.cmd == "init-maps":
+            print(json.dumps(bridge.init_maps(s, tag=args.tag), indent=2, ensure_ascii=False))
+        elif args.cmd == "map-sources":
+            print("\n".join(bridge.list_map_sources(s)) or "(none)")
     except AdbError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1

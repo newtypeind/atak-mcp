@@ -20,12 +20,13 @@ import time
 from typing import Optional
 
 from ._adb import AdbError
+from .device import host_address, is_emulator, reverse
 from .input import clear_text, key, swipe, tap, tap_xy, text_input
 from .ui import Node, dump, exists, find, wait_for
 
 __all__ = [
     "list_servers", "add_server", "remove_server", "set_server_enabled",
-    "edit_server",
+    "edit_server", "connect_local_server",
 ]
 
 _PROTO_RADIO = {"tcp": "tcp_radio", "ssl": "ssl_radio", "quic": "quic_radio"}
@@ -186,6 +187,32 @@ def list_servers(serial: Optional[str] = None) -> list[dict]:
         {k: v for k, v in r.items() if not k.startswith("_")}
         for r in _server_rows(dump(serial))
     ]
+
+
+def connect_local_server(
+    port,
+    name: str = "local",
+    protocol: str = "tcp",
+    serial: Optional[str] = None,
+) -> str:
+    """Add a TAK server connection that points at a server on the HOST machine.
+
+    On a USB device, sets up an ``adb reverse`` tunnel so the device's
+    ``localhost:<port>`` forwards to the host, then adds a connection to
+    ``127.0.0.1:<port>``. On an emulator, adds a connection to ``10.0.2.2:<port>``
+    (the host loopback alias) with no tunnel. Either way the device ends up
+    talking to whatever is listening on the host's ``localhost:<port>`` -- e.g.
+    a TAK server you started locally.
+    """
+    emu = is_emulator(serial)
+    tunnel = ""
+    if not emu:
+        reverse(int(port), int(port), serial)
+        tunnel = f"adb reverse tcp:{port} -> host; "
+    host = host_address(serial)
+    added = add_server(name, host, port, protocol, serial)
+    kind = "emulator" if emu else "usb"
+    return f"[{kind}] {tunnel}{added}"
 
 
 def add_server(

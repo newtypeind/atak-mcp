@@ -15,9 +15,11 @@ callers (``cli.py``, ``server.py``) keep using a flat ``bridge.<name>``:
   * ``input``   - taps, gestures, text entry
   * ``device``  - power/lifecycle, packages, permissions, files, logs, diagnostics
   * ``intents`` - broadcasts and ``tak:`` deep links (enroll, import_url, ...)
-  * ``plugins`` - install/reload lifecycle and dev-loop composites
-  * ``health``  - version detection and the ``doctor`` check
-  * ``servers`` - TAK server connection CRUD (Manage Server Connections UI)
+  * ``plugins``  - install/reload lifecycle and dev-loop composites
+  * ``health``   - version detection and the ``doctor`` check
+  * ``servers``  - TAK server connection CRUD (Manage Server Connections UI)
+  * ``emulator`` - emulator render/mic troubleshooting
+  * ``maps``     - install custom map sources for a usable basemap
 """
 
 from __future__ import annotations
@@ -30,8 +32,12 @@ from .intents import *  # noqa: F401,F403
 from .plugins import *  # noqa: F401,F403
 from .health import *  # noqa: F401,F403
 from .servers import *  # noqa: F401,F403
+from .emulator import *  # noqa: F401,F403
+from .maps import *  # noqa: F401,F403
 
-from . import _adb, device, health, input, intents, plugins, servers, ui
+from . import (
+    _adb, device, emulator, health, input, intents, maps, plugins, servers, ui,
+)
 
 __all__ = [
     *_adb.__all__,
@@ -42,4 +48,6 @@ __all__ = [
     *plugins.__all__,
     *health.__all__,
     *servers.__all__,
+    *emulator.__all__,
+    *maps.__all__,
 ]

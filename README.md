@@ -155,7 +155,12 @@ ATAK from outside the app; see *Configure a TAK server* for the Android 13+
 limits that make them necessary.
 
 Server connections: `list_servers` (name, host, port, protocol, enabled,
-status), `add_server`, `edit_server`, `remove_server`, `set_server_enabled`.
+status), `add_server`, `edit_server`, `remove_server`, `set_server_enabled`,
+`connect_local_server` (connect to a TAK server on your host machine).
+
+Emulator & maps: `is_emulator`, `reverse` (adb reverse tunnel), `fix_opengl`
+(emulator map-render-crash fix), `fix_audio_input` (emulator mic passthrough),
+`init_maps` (install custom map sources), `list_map_sources`.
 
 Version / health: `atak_version` (the installed ATAK version), `doctor` (probe
 the device for version drift and capabilities), `mcp_version` (this tool's own
@@ -245,6 +250,35 @@ single uiautomator dump is the slow step (~2s on the test foldable), so the
 first call is ~20s on that device; once on the list, follow-up calls (another
 `servers`, a `set-server`) are ~4-5s. A faster device is proportionally
 quicker.
+
+### Connect to a TAK server running on your machine
+
+`connect-local` points ATAK at a server on the host's loopback. On a USB device
+it sets up an `adb reverse` tunnel and connects to `127.0.0.1:<port>`; on an
+emulator it connects to `10.0.2.2:<port>` (the host alias) with no tunnel:
+
+```bash
+$A connect-local 8088 --name local --proto tcp   # host's CoT TCP port
+```
+
+Use the server's CoT streaming port, not its web port (e.g. a TAK Server's TCP
+CoT port like 8088/8087, not 8080) — otherwise ATAK connects but shows an IO
+error. Verified end-to-end against a local server (green connection).
+
+### Emulator fixes and a basemap
+
+Android-Studio-emulator quirks with ATAK, and a blank-map fix:
+
+```bash
+$A fix-opengl     # disable ATAK OpenGL (emulator map-render crash); restart ATAK
+$A fix-audio      # add hw.audioInput=yes to the AVD (mic passthrough); restart emulator
+$A init-maps      # install ATAK-Maps custom map sources (Bing/Google/ESRI/...)
+$A map-sources    # list installed map sources
+```
+
+After `init-maps`, reopen ATAK's map-source picker (toolbar map icon) and choose
+one, e.g. `Bing_Satellite`. `fix-opengl`/`fix-audio` are only needed on the
+emulator.
 
 A note on limits. On Android 13+, ATAK registers its internal broadcast
 receivers as `NOT_EXPORTED` behind a signature permission, so `adb shell am
