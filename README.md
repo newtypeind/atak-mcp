@@ -102,9 +102,28 @@ is attached (add an `"env": { "ANDROID_SERIAL": "..." }` key to the server entry
 
 ### Tools exposed
 
-`list_devices`, `screenshot` (returns the image), `ui_dump`, `find`, `tap`,
-`wait_for`, `swipe`, `type_text`, `press_key`, `logcat`, `list_plugins`,
-`reload_plugin`, `install_apk`, `confirm_load`, `launch_atak`.
+Screen & input: `screenshot` (returns the image), `ui_dump`, `find`, `exists`,
+`tap`, `long_press`, `double_tap`, `swipe`, `type_text`, `clear_text`,
+`press_key`, `wait_for`, `wait_gone`.
+
+Device & lifecycle: `list_devices`, `wake_unlock`, `stay_awake`, `is_running`,
+`launch_atak`, `restart_atak`, `force_stop`, `clear_app_data`, `grant_permission`,
+`push_file`, `pull_file`, `broadcast`.
+
+Plugins & diagnostics: `list_plugins`, `install_apk`, `reload_plugin`,
+`confirm_load`, `deploy_plugin`, `wait_atak_ready`, `open_tool`, `logcat`,
+`crashes`, `record_start`, `record_stop`.
+
+ATAK deep links: `enroll` (configure a TAK server), `import_url` (import from a
+URL), `deep_link` (any raw `tak:` URI). These are the supported way to drive
+ATAK from outside the app; see *Configure a TAK server* for the Android 13+
+limits that make them necessary.
+
+Server connections: `list_servers` (name, host, port, protocol, enabled,
+status), `add_server`, `edit_server`, `remove_server`, `set_server_enabled`.
+
+Version / health: `atak_version`, `doctor` (probe the device for version drift
+and capabilities).
 
 ## Use as a CLI
 
@@ -123,6 +142,21 @@ $A list-plugins                  # installed ATAK plugins
 $A reload com.example.plugin path/to/app.apk
 $A confirm-load                  # confirm ATAK's "load this plugin?" dialog
 $A launch                        # foreground ATAK civ
+
+# Whole plugin loop in one call, then check it did not crash
+$A deploy com.example.plugin path/to/app.apk   # reload + launch + confirm + wait ready
+$A open-tool "Your Plugin Name"                # Tools menu -> your plugin
+$A crashes com.example.plugin                  # empty == no crash
+
+# Configure ATAK via its deep links (the supported external entry point)
+$A enroll tak.example.com:8089:ssl --username alice --token s3cr3t  # add a TAK server
+$A import-url https://files.example.com/overlay.zip                 # import from a URL
+$A deeplink "tak://com.atakmap.app/import?url=https://host/x.kml"   # any tak: link
+
+# CI hygiene
+$A clear-data && $A launch && $A ready          # fresh state, then wait until up
+$A grant com.atakmap.app.civ android.permission.ACCESS_FINE_LOCATION
+$A record-start ; sleep 10 ; $A record-stop -o run.mp4
 ```
 
 ### Open a plugin without hunting for it
@@ -134,6 +168,81 @@ menu. So opening one is just:
 $A tap "Tools"
 $A tap "Your Plugin Name"
 ```
+
+### Configure a TAK server, import data
+
+ATAK exposes a `tak:` deep-link activity, and that is the supported way to drive
+it from outside the app. `enroll` adds/configures a server connection and
+`import-url` pulls in a file or data package:
+
+```bash
+$A enroll tak.example.com:8089:ssl --username alice --token s3cr3t
+$A import-url https://files.example.com/server.zip
+```
+
+These were confirmed by decompiling ATAK-CIV 5.x: the `enroll` link is handled
+with `host`/`username`/`token` parameters, and `import` with a `url` parameter.
+
+`import_url` pops a "Import &lt;url&gt;? Yes/No" confirmation in ATAK; tap it
+through with `tap "Yes"` (or `tap "No"` to cancel).
+
+### Manage server connections
+
+`enroll` is specifically the SSL certificate-enrollment flow and only adds a
+connection once it reaches a real TAK server. To create/inspect/change plain
+TCP/SSL/QUIC streaming connections, use the server-connection commands, which
+drive ATAK's "Manage Server Connections" screen by resource id:
+
+```bash
+$A servers                                      # list connections (JSON)
+$A add-server hq 1.2.3.4 8087 --proto tcp       # add a TCP connection
+$A edit-server hq --port 8088                   # change a field
+$A set-server hq --off                          # disable (or --on)
+$A rm-server hq                                  # delete
+```
+
+`servers` reports, per connection: `name`, `host`, `port`, `protocol`,
+`enabled` (the on/off checkbox) and `status` (ATAK's status/error line, empty
+when idle). Speed note: these walk five screens deep into Settings, and a
+single uiautomator dump is the slow step (~2s on the test foldable), so the
+first call is ~20s on that device; once on the list, follow-up calls (another
+`servers`, a `set-server`) are ~4-5s. A faster device is proportionally
+quicker.
+
+A note on limits. On Android 13+, ATAK registers its internal broadcast
+receivers as `NOT_EXPORTED` behind a signature permission, so `adb shell am
+broadcast` cannot reach them. That rules out driving map actions like
+panning/zooming (`com.atakmap.android.maps.FOCUS`) or marker creation straight
+from adb: those need to run inside ATAK's process (a plugin) or arrive over a
+TAK server. The deep links above and the UI automation (`tap`/`type`/`find`)
+remain the dependable external surface.
+
+### Managing ATAK version drift
+
+The bridge is verified against the ATAK version in `bridge.ATAK_TESTED_VERSION`
+(currently `5.6`). The Android-level tools (`tap`/`find`/`pm`/`am`, screenshots,
+lifecycle) do not depend on the ATAK version; only the ATAK-internal bits do:
+the `tak:` deep-link grammar, resource ids, and the not-exported broadcast
+behaviour. Two things keep that manageable:
+
+- Deep-link calls are verified after the fact. `enroll` / `import_url` /
+  `deep_link` watch logcat to confirm ATAK actually processed the URI and raise
+  if it did not, so a grammar change on a future build surfaces loudly instead
+  of failing silently. Pass `--no-verify` to skip.
+- `doctor` probes a connected device and reports the installed flavour/version
+  against the tested version, whether the deep-link entry point still routes
+  (a side-effect-free no-op probe), whether the resource ids the UI helpers use
+  are present, and whether internal broadcasts are reachable. Run it against a
+  new ATAK release to see what, if anything, changed:
+
+  ```bash
+  $A version          # -> 5.6.0.x
+  $A doctor           # JSON health report
+  ```
+
+When a new ATAK release moves something, `doctor` flags it; re-derive the
+deep-link grammar from the installed APK (decompile + a `logcat` check) and
+bump `ATAK_TESTED_VERSION`.
 
 ## Development
 
@@ -160,6 +269,11 @@ prepends a warning banner before the PNG bytes, which the bridge strips. The UI
 tree comes from `uiautomator dump` (retried, since it refuses to dump mid-
 animation). `find`/`tap` match against each node's text, resource id, and content
 description, and `tap` prefers a clickable match over a same-text label.
+
+For configuration that the UI cannot reach, `push` wraps `adb push` (to stage a
+certificate or data package on the device) and `broadcast` wraps
+`adb shell am broadcast` (to drive ATAK's Intent-based config, e.g. importing a
+staged data package), so an agent is not limited to what is tappable on screen.
 
 ## License
 
