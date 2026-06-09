@@ -130,9 +130,16 @@ call `check_update` at the start of a session and tell you if you're behind.
 
 ### Tools exposed
 
-Screen & input: `screenshot` (returns the image), `ui_dump`, `find`, `exists`,
-`tap`, `long_press`, `double_tap`, `swipe`, `type_text`, `clear_text`,
-`press_key`, `wait_for`, `wait_gone`.
+Screen & input: `screenshot` (returns the image plus geometry: device/image
+size, scale, rotation), `ui_dump`, `find` (with `scroll`), `exists`, `tap`
+(by query, raw `x`/`y`, or normalized `nx`/`ny` in [0,1], and a `scroll` option),
+`scroll_into_view`, `long_press`, `double_tap`, `swipe` (pixels or normalized),
+`type_text`, `clear_text`, `press_key`, `wait_for`, `wait_gone`.
+
+Normalized coordinates and the screenshot geometry let a caller act on a
+screenshot-relative position even when the displayed image is downscaled
+client-side (`tap = screenshot_pixel / scale`, or just pass `nx`/`ny`). `find
+--scroll` / `scroll_into_view` bring an off-screen list item into view first.
 
 Device & lifecycle: `list_devices`, `wake_unlock`, `stay_awake`, `is_running`,
 `launch_atak`, `restart_atak`, `force_stop`, `clear_app_data`, `grant_permission`,

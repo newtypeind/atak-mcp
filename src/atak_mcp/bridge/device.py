@@ -36,13 +36,39 @@ def logcat(
     lines: int = 200,
     grep: Optional[str] = None,
     serial: Optional[str] = None,
+    since: Optional[str] = None,
 ) -> str:
-    """Dump the tail of logcat, optionally filtered by a substring."""
-    out = adb(["logcat", "-d", "-v", "time", "-t", str(lines)], serial, timeout=30)
+    """Dump logcat non-blocking, grepping the FULL buffer and returning matches.
+
+    Always uses ``adb logcat -d`` (dump and exit, never a streaming/follow call
+    that would hang). The important behaviour:
+
+    * ``grep`` filters the **whole** ring buffer, not just a trailing window, so
+      a marker logged long ago is still found.
+    * ``lines`` then caps how many lines are **returned**, applied *after*
+      filtering, i.e. "the last N matching lines from the whole buffer". Pass
+      ``lines<=0`` (or ``None``) for no cap. With no ``grep``/``since`` this is a
+      fast path that asks adb for just the last N lines of the full dump.
+    * ``since`` narrows the buffer read to a time window, mapping to
+      ``adb logcat -d -t '<since>'``. adb accepts a line count (e.g. ``"500"``)
+      or an absolute timestamp (e.g. ``"01-30 14:00:00.000"`` or
+      ``"2026-01-30 14:00:00.000"``). ``grep``/``lines`` still apply within it.
+    """
+    args = ["logcat", "-d", "-v", "time"]
+    if since:
+        args += ["-t", since]
+    elif not grep and lines and lines > 0:
+        # No filter: let adb return just the last N lines (cheap, avoids
+        # shovelling the whole multi-MB buffer over adb just to tail it).
+        args += ["-t", str(lines)]
+    out = adb(args, serial, timeout=30)
+    result = out.splitlines()
     if grep:
         g = grep.lower()
-        out = "\n".join(l for l in out.splitlines() if g in l.lower())
-    return out
+        result = [l for l in result if g in l.lower()]
+    if lines and lines > 0:
+        result = result[-lines:]
+    return "\n".join(result)
 
 
 # --------------------------------------------------------------------------- #

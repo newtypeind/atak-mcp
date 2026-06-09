@@ -32,6 +32,10 @@ Homepage = "https://github.com/newtypeind/atak-mcp"
 Repository = "https://github.com/newtypeind/atak-mcp"
 Issues = "https://github.com/newtypeind/atak-mcp/issues"
 
+[dependency-groups]
+# Installed by `uv sync` / `uv run` automatically; the runtime needs neither.
+dev = ["pytest>=8"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
