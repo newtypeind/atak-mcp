@@ -97,8 +97,19 @@ Add the same block to the client's MCP config (for Claude Desktop that is
 }
 ```
 
-Select a device with the `ANDROID_SERIAL` environment variable when more than one
-is attached (add an `"env": { "ANDROID_SERIAL": "..." }` key to the server entry).
+#### Selecting a device when several are attached
+
+Every device-touching tool takes an optional `serial` argument: the adb serial
+of the target (the `serial` field from `list_devices`). Pass it to drive a
+specific phone or emulator, so one server can fan out across several devices in
+the same session: `screenshot(serial="emulator-5554")`,
+`tap(query="Record", serial="R3CRB0C3YPV")`. Leave it empty to use the single
+attached device. The CLI mirrors this with a global `--serial` flag
+(`atak-mcp --serial emulator-5554 screenshot`).
+
+To pin a whole server instance to one device instead, set the `ANDROID_SERIAL`
+environment variable (add an `"env": { "ANDROID_SERIAL": "..." }` key to the
+server entry); a per-call `serial` still overrides it.
 
 ### Updating atak-mcp
 

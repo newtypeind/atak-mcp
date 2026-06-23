@@ -39,3 +39,15 @@ def test_adb_error_returns_exit_1(monkeypatch):
         raise AdbError("no device")
     monkeypatch.setattr("atak_mcp.cli.bridge.list_servers", boom)
     assert cli.main(["servers"]) == 1
+
+
+def test_serial_flag_reaches_bridge(monkeypatch):
+    captured = {}
+
+    def fake_list_servers(s):
+        captured["s"] = s
+        return [{"name": "hq"}]
+
+    monkeypatch.setattr("atak_mcp.cli.bridge.list_servers", fake_list_servers)
+    assert cli.main(["--serial", "emulator-5554", "servers"]) == 0
+    assert captured["s"] == "emulator-5554"

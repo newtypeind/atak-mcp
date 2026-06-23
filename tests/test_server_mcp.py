@@ -31,3 +31,29 @@ async def test_call_tool_list_servers(monkeypatch):
 async def test_call_tool_mcp_version():
     result = await server.mcp.call_tool("mcp_version", {})
     assert __version__ in str(result)
+
+
+async def test_serial_passes_through_to_bridge(monkeypatch):
+    # an explicit serial reaches the bridge so a tool targets a chosen device
+    captured = {}
+
+    def fake_tap(query, by="any", index=0, exact=False, scroll=False, serial=None):
+        captured["serial"] = serial
+        return server.bridge.Node(text="X", bounds=(0, 0, 10, 10))
+
+    monkeypatch.setattr(server.bridge, "tap", fake_tap)
+    await server.mcp.call_tool("tap", {"query": "X", "serial": "emulator-5554"})
+    assert captured["serial"] == "emulator-5554"
+
+
+async def test_empty_serial_becomes_none(monkeypatch):
+    # the default empty-string serial is normalized to None (use default device)
+    captured = {}
+
+    def fake_list_servers(serial=None):
+        captured["serial"] = serial
+        return [{"name": "hq"}]
+
+    monkeypatch.setattr(server.bridge, "list_servers", fake_list_servers)
+    await server.mcp.call_tool("list_servers", {})
+    assert captured["serial"] is None
