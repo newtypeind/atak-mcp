@@ -10,6 +10,7 @@ is a fact, not a guess.
 
 from __future__ import annotations
 
+import os
 import re
 import time
 from typing import Optional
@@ -24,6 +25,15 @@ from .ui import dump
 __all__ = ["atak_version", "installed_atak", "doctor"]
 
 _VERSION_RE = re.compile(r"versionName=(\S+)")
+
+
+def _select_device(devs: list[dict], target: Optional[str]) -> Optional[dict]:
+    """Pick the ``devices()`` row for ``target`` serial, or the first row when no
+    target is given (the single-device case). ``None`` if ``target`` is set but
+    absent, so multi-device probes report the device they actually drove."""
+    if target:
+        return next((d for d in devs if d.get("serial") == target), None)
+    return devs[0] if devs else None
 
 
 def atak_version(package: str = ATAK_CIV_PACKAGE, serial: Optional[str] = None) -> str:
@@ -54,9 +64,13 @@ def doctor(package: str = ATAK_CIV_PACKAGE, serial: Optional[str] = None) -> dic
     report: dict = {"tested_version": ATAK_TESTED_VERSION, "checks": {}}
 
     devs = devices()
-    report["device"] = devs[0] if devs else None
+    target = serial or os.environ.get("ANDROID_SERIAL")
+    report["device"] = _select_device(devs, target)
     if not devs:
         report["checks"]["device"] = "FAIL: no adb device"
+        return report
+    if target and report["device"] is None:
+        report["checks"]["device"] = f"FAIL: no adb device with serial {target!r}"
         return report
 
     flavours = installed_atak(serial)

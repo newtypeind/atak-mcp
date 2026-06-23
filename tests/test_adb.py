@@ -39,3 +39,21 @@ def test_adb_raises_on_failure(fake_run):
 def test_adb_check_false_swallows_failure(fake_run):
     fake_run.returncode = 1
     assert adb(["shell", "false"], check=False) == ""
+
+
+def test_adb_inserts_serial_flag(fake_run):
+    # an explicit serial targets one device among several via `adb -s <serial>`
+    adb(["shell", "echo", "hi"], "emulator-5554")
+    assert fake_run.last == ["adb", "-s", "emulator-5554", "shell", "echo", "hi"]
+
+
+def test_adb_serial_from_env_when_unset(fake_run, monkeypatch):
+    # with no explicit serial, fall back to $ANDROID_SERIAL
+    monkeypatch.setenv("ANDROID_SERIAL", "R3CRB0C3YPV")
+    adb(["shell", "echo", "hi"])
+    assert fake_run.last[:3] == ["adb", "-s", "R3CRB0C3YPV"]
+
+
+def test_adb_no_serial_flag_by_default(fake_run):
+    adb(["shell", "echo", "hi"])
+    assert fake_run.last == ["adb", "shell", "echo", "hi"]
